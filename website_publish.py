@@ -37,7 +37,16 @@ def authenticated_environment(temp_root):
     askpass = temp_root / "git-askpass.sh"
     askpass.write_text('#!/bin/sh\ncase "$1" in\n  *Username*) printf "%s\\n" "x-access-token" ;;\n  *) printf "%s\\n" "$PORTFOLIO_PUBLISH_TOKEN" ;;\nesac\n', encoding="utf-8")
     askpass.chmod(askpass.stat().st_mode | stat.S_IXUSR)
-    env = os.environ.copy(); env["GIT_ASKPASS"] = str(askpass); env["GIT_TERMINAL_PROMPT"] = "0"
+    env = os.environ.copy()
+    env["GIT_ASKPASS"] = str(askpass)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    # Codespaces installs a credential helper whose source-repository token can
+    # override GIT_ASKPASS. Disable inherited helpers so the dedicated portfolio
+    # token is used for the cross-repository website clone and push.
+    env["GIT_CONFIG_COUNT"] = "1"
+    env["GIT_CONFIG_KEY_0"] = "credential.helper"
+    env["GIT_CONFIG_VALUE_0"] = ""
+    env.pop("GITHUB_TOKEN", None)
     return env
 
 
