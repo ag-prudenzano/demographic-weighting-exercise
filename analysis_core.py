@@ -16,7 +16,7 @@ POPULATION_SIZE, SAMPLE_SIZE, SEED = 60_000, 2_400, 20260809
 AGE_BANDS = ["18-29", "30-44", "45-59", "60+"]
 REGIONS = ["London", "South", "Midlands", "North", "Scotland/Wales"]
 EDUCATION = ["Degree", "No degree"]
-BG, TEXT, MUTED, LINE, BAR, ACCENT = "#0C0C0D", "#FFFFFF", "#A2A2A9", "#313135", "#494950", "#FFFFFF"
+BG, TEXT, MUTED, LINE, BAR, ACCENT = "#0C0C0D", "#FFFFFF", "#A2A2A9", "#313135", "#5D5D65", "#FFFFFF"
 
 
 def run_git(*args):
