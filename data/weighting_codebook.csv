@@ -1,0 +1,9 @@
+variable,description
+person_id,Synthetic person identifier
+age_band,Age benchmark category
+gender,Gender category
+region,UK region benchmark category
+education,Degree-status benchmark category
+policy_support_0_10,Simulated primary survey outcome
+selection_propensity,Modelled probability of sample inclusion
+sampled,Achieved-sample indicator

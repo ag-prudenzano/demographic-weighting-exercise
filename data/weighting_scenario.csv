@@ -1,0 +1,7 @@
+parameter,value
+population_size,60000
+sample_size,2400
+seed,20260809
+post_stratification_controls,age_band x education
+raking_controls,age_band + region + education
+weight_cap,4.0
