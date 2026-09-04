@@ -16,7 +16,8 @@ POPULATION_SIZE, SAMPLE_SIZE, SEED = 60_000, 2_400, 20260809
 AGE_BANDS = ["18-29", "30-44", "45-59", "60+"]
 REGIONS = ["London", "South", "Midlands", "North", "Scotland/Wales"]
 EDUCATION = ["Degree", "No degree"]
-BG, TEXT, MUTED, LINE, BAR, ACCENT = "#0C0C0D", "#FFFFFF", "#A2A2A9", "#313135", "#5D5D65", "#FFFFFF"
+BG, TEXT, MUTED = "#000000", "#FFFFFF", "#B3B3B3"
+LINE, GRID, BAR, ACCENT = "#404040", "#333333", "#666666", "#FFFFFF"
 
 
 def run_git(*args):
@@ -169,7 +170,7 @@ def style(ax, axis="y"):
     ax.figure.patch.set_facecolor(BG); ax.set_facecolor(BG); ax.tick_params(colors=MUTED, labelsize=9.5, length=0, pad=7)
     ax.xaxis.label.set_color(MUTED); ax.yaxis.label.set_color(MUTED); ax.title.set_color(TEXT)
     for spine in ax.spines.values(): spine.set_visible(False)
-    ax.grid(axis=axis, color=LINE, linewidth=.8, alpha=.65); ax.set_axisbelow(True)
+    ax.grid(axis=axis, color=GRID, linewidth=.8); ax.set_axisbelow(True)
 
 
 def create_figures(sample, estimates, composition, diagnostics):
@@ -177,19 +178,19 @@ def create_figures(sample, estimates, composition, diagnostics):
     summary = composition.groupby("variable")[["unweighted_difference_pp", "poststratified_difference_pp", "raked_difference_pp"]].apply(lambda x: x.abs().mean())
     fig, ax = plt.subplots(figsize=(9.6, 5.6)); style(ax)
     x = np.arange(len(summary)); width = .25
-    ax.bar(x-width, summary.unweighted_difference_pp, width, color=BAR, label="Unweighted")
-    ax.bar(x, summary.poststratified_difference_pp, width, color=MUTED, label="Post-stratified")
-    ax.bar(x+width, summary.raked_difference_pp, width, color=ACCENT, label="Raked")
+    ax.bar(x-width, summary.unweighted_difference_pp, width, color=BAR, edgecolor=LINE, label="Unweighted")
+    ax.bar(x, summary.poststratified_difference_pp, width, color=MUTED, edgecolor=LINE, label="Post-stratified")
+    ax.bar(x+width, summary.raked_difference_pp, width, color=ACCENT, edgecolor=LINE, label="Raked")
     ax.set_xticks(x, [v.replace("_", " ").title() for v in summary.index]); ax.set_ylabel("Mean absolute deviation (percentage points)", labelpad=12); ax.set_title("Weighting restores demographic alignment", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     legend = ax.legend(frameon=False); [t.set_color(MUTED) for t in legend.get_texts()]
     fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "composition_before_after_weighting.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
     fig, ax = plt.subplots(figsize=(9.6, 5.6)); style(ax)
-    values = estimates.mean_policy_support; bars = ax.bar(estimates.estimate, values, color=[ACCENT, BAR, MUTED, TEXT], width=.58)
+    values = estimates.mean_policy_support; bars = ax.bar(estimates.estimate, values, color=[ACCENT, BAR, MUTED, TEXT], edgecolor=LINE, width=.58)
     ax.set_ylim(values.min()-.25, values.max()+.25); ax.set_ylabel("Mean policy support (0–10)", labelpad=12); ax.set_title("Weighted estimates move towards the benchmark", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     for bar, value in zip(bars, values): ax.text(bar.get_x()+bar.get_width()/2, value+.025, f"{value:.3f}", ha="center", color=TEXT)
     fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "weighted_unweighted_estimates.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
     fig, ax = plt.subplots(figsize=(9.6, 5.6)); style(ax, "y")
-    bins = np.linspace(.2, 4, 24); ax.hist(sample.poststrat_weight, bins=bins, color=BAR, alpha=.85, label="Post-stratified"); ax.hist(sample.raked_weight, bins=bins, color=ACCENT, alpha=.55, label="Raked")
+    bins = np.linspace(.2, 4, 24); ax.hist(sample.poststrat_weight, bins=bins, color=BAR, edgecolor=LINE, label="Post-stratified"); ax.hist(sample.raked_weight, bins=bins, histtype="step", color=ACCENT, linewidth=2, label="Raked")
     ax.axvline(1, color=MUTED, linewidth=1); ax.set_xlabel("Normalised survey weight", labelpad=12); ax.set_ylabel("Respondents", labelpad=12); ax.set_title("Weight distributions reveal the precision cost", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     legend = ax.legend(frameon=False); [t.set_color(MUTED) for t in legend.get_texts()]
     fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "weight_distributions.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
