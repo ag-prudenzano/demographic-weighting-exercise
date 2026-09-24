@@ -1,4 +1,5 @@
 from pathlib import Path
+from io import BytesIO
 import subprocess
 
 try:
@@ -16,8 +17,67 @@ POPULATION_SIZE, SAMPLE_SIZE, SEED = 60_000, 2_400, 20260809
 AGE_BANDS = ["18-29", "30-44", "45-59", "60+"]
 REGIONS = ["London", "South", "Midlands", "North", "Scotland/Wales"]
 EDUCATION = ["Degree", "No degree"]
-BG, TEXT, MUTED = "#000000", "#FFFFFF", "#B3B3B3"
+BG, TEXT, MUTED = "#0F0F0F", "#FFFFFF", "#B3B3B3"
 LINE, GRID, BAR, ACCENT = "#404040", "#333333", "#666666", "#FFFFFF"
+
+FIGURE_PADDING_PX = 30
+FIGURE_CORNER_RADIUS_PX = 38
+
+
+def save_rounded_figure(fig, path, dpi=200):
+    """Save a chart on a rounded #0F0F0F container with a 30 px inset."""
+    buffer = BytesIO()
+    fig.savefig(
+        buffer,
+        format="png",
+        dpi=dpi,
+        facecolor=BG,
+        bbox_inches="tight",
+        pad_inches=0,
+    )
+    buffer.seek(0)
+    image = plt.imread(buffer)
+    if image.shape[-1] == 3:
+        image = np.dstack(
+            [image, np.ones(image.shape[:2], dtype=image.dtype)]
+        )
+
+    height, width = image.shape[:2]
+    padding = FIGURE_PADDING_PX
+    background_rgb = np.array(
+        [int(BG[i : i + 2], 16) / 255 for i in (1, 3, 5)],
+        dtype=np.float32,
+    )
+    canvas = np.empty(
+        (height + 2 * padding, width + 2 * padding, 4),
+        dtype=np.float32,
+    )
+    canvas[..., :3] = background_rgb
+    canvas[..., 3] = 1.0
+    canvas[padding : padding + height, padding : padding + width] = image
+
+    canvas_height, canvas_width = canvas.shape[:2]
+    radius = min(
+        FIGURE_CORNER_RADIUS_PX,
+        canvas_height // 2,
+        canvas_width // 2,
+    )
+    y, x = np.ogrid[:canvas_height, :canvas_width]
+    edge_x = np.minimum(x, canvas_width - 1 - x)
+    edge_y = np.minimum(y, canvas_height - 1 - y)
+    corner = (edge_x < radius) & (edge_y < radius)
+    distance = np.sqrt(
+        (radius - 0.5 - edge_x) ** 2
+        + (radius - 0.5 - edge_y) ** 2
+    )
+    alpha = np.ones((canvas_height, canvas_width), dtype=np.float32)
+    alpha[corner] = np.clip(
+        radius + 0.5 - distance[corner],
+        0,
+        1,
+    )
+    canvas[..., 3] *= alpha
+    plt.imsave(path, np.clip(canvas, 0, 1))
 
 
 def run_git(*args):
@@ -183,17 +243,17 @@ def create_figures(sample, estimates, composition, diagnostics):
     ax.bar(x+width, summary.raked_difference_pp, width, color=ACCENT, edgecolor=LINE, label="Raked")
     ax.set_xticks(x, [v.replace("_", " ").title() for v in summary.index]); ax.set_ylabel("Mean absolute deviation (percentage points)", labelpad=12); ax.set_title("Weighting restores demographic alignment", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     legend = ax.legend(frameon=False); [t.set_color(MUTED) for t in legend.get_texts()]
-    fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "composition_before_after_weighting.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
+    fig.tight_layout(pad=1.6); save_rounded_figure(fig, FIGURE_DIR / "composition_before_after_weighting.png", dpi=200); plt.close(fig)
     fig, ax = plt.subplots(figsize=(9.6, 5.6)); style(ax)
     values = estimates.mean_policy_support; bars = ax.bar(estimates.estimate, values, color=[ACCENT, BAR, MUTED, TEXT], edgecolor=LINE, width=.58)
     ax.set_ylim(values.min()-.25, values.max()+.25); ax.set_ylabel("Mean policy support (0–10)", labelpad=12); ax.set_title("Weighted estimates move towards the benchmark", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     for bar, value in zip(bars, values): ax.text(bar.get_x()+bar.get_width()/2, value+.025, f"{value:.3f}", ha="center", color=TEXT)
-    fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "weighted_unweighted_estimates.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
+    fig.tight_layout(pad=1.6); save_rounded_figure(fig, FIGURE_DIR / "weighted_unweighted_estimates.png", dpi=200); plt.close(fig)
     fig, ax = plt.subplots(figsize=(9.6, 5.6)); style(ax, "y")
     bins = np.linspace(.2, 4, 24); ax.hist(sample.poststrat_weight, bins=bins, color=BAR, edgecolor=LINE, label="Post-stratified"); ax.hist(sample.raked_weight, bins=bins, histtype="step", color=ACCENT, linewidth=2, label="Raked")
     ax.axvline(1, color=MUTED, linewidth=1); ax.set_xlabel("Normalised survey weight", labelpad=12); ax.set_ylabel("Respondents", labelpad=12); ax.set_title("Weight distributions reveal the precision cost", loc="left", pad=18, fontsize=16, fontweight=400, color=TEXT)
     legend = ax.legend(frameon=False); [t.set_color(MUTED) for t in legend.get_texts()]
-    fig.tight_layout(pad=1.6); fig.savefig(FIGURE_DIR / "weight_distributions.png", dpi=200, facecolor=BG, bbox_inches="tight"); plt.close(fig)
+    fig.tight_layout(pad=1.6); save_rounded_figure(fig, FIGURE_DIR / "weight_distributions.png", dpi=200); plt.close(fig)
 
 
 def generate_report(population, sample, estimates, composition, diagnostics):
